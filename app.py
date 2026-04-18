@@ -10,22 +10,29 @@ from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email import encoders
 
-# ---------------- UI DESIGN ---------------- #
-st.set_page_config(page_title="Professional Essay Generator", layout="wide")
+# ---------------- ၁။ App ၏ မျက်နှာစာ ဒီဇိုင်း ---------------- #
+st.set_page_config(page_title="Professional Essay Generator", layout="centered")
 st.markdown("""
     <style>
-    .main { background-color: #f8f9fa; }
-    .stButton>button { background-color: #d35400; color: white; border-radius: 5px; height: 3em; width: 100%; }
+    .main { background-color: #fdfcfb; }
+    .stButton>button { 
+        background-color: #d35400; 
+        color: white; 
+        border-radius: 8px; 
+        height: 3.5em; 
+        width: 100%;
+        font-weight: bold;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("✍️ Mine Free Myanmar Essay & Emailer")
-st.write("ပြိုင်ပွဲစည်းကမ်းချက်များအတိုင်း (A4, 25mm Margin, 12pt, Justified) စာစီစာကုံးကို အလိုအလျောက် ရေးသားပေးပါမည်။")
+st.title("✍️ Mine Free Myanmar Essay Creator")
+st.info("ဤ App သည် ပြိုင်ပွဲဝင် စည်းကမ်းချက်များဖြစ်သော A4၊ Margin 25mm၊ Font 12pt နှင့် Justified စနစ်တို့ဖြင့် Word ဖိုင်ကို တိုက်ရိုက် ထုတ်ပေးမည်ဖြစ်ပါသည်။")
 
-# ---------------- CONFIGURATION ---------------- #
-api_key = st.text_input("🔑 Gemini API Key ကို ထည့်ပါ", type="password")
+# ---------------- ၂။ Configuration & Inputs ---------------- #
+api_key = st.text_input("🔑 Google AI Studio API Key ကို ထည့်ပါ", type="password")
 
-# ပြိုင်ပွဲဝင် ခေါင်းစဉ် ၄ ခု
+# ပြိုင်ပွဲဝင် ခေါင်းစဉ်များ
 topics = [
     "ကျွန်ုပ်တို့၏ လူမှုပတ်ဝန်းကျင်တွင် မြေမြှုပ်မိုင်းများ ဆက်လက်အသုံးပြုမှုကို မည်သို့တားဆီးကြမည်နည်း။",
     "မိမိတို့ဒေသအတွင်း လက်နက်ကိုင်အဖွဲ့အစည်းများ၏ မိုင်းအသုံးပြုမှုကို အဆုံးသတ်နိုင်ရန် လူထုမှလုပ်ဆောင်နိုင်သည့် အဆင့်ဆင့်သော လုပ်ငန်းစဉ်များ။",
@@ -34,125 +41,131 @@ topics = [
 ]
 selected_topic = st.selectbox("စာစီစာကုံး ခေါင်းစဉ်ရွေးချယ်ပါ", topics)
 
-# Email Settings
-st.subheader("📧 Auto Email ပေးပို့ရန် အချက်အလက်")
-sender_email = st.text_input("သင့် Gmail")
-app_password = st.text_input("Gmail App Password", type="password")
+st.subheader("📧 Email ပို့ရန် အချက်အလက် (Optional)")
+col1, col2 = st.columns(2)
+with col1:
+    sender_email = st.text_input("သင့် Gmail လိပ်စာ")
+with col2:
+    app_password = st.text_input("Gmail App Password", type="password", help="Gmail Settings ထဲမှ ရယူထားသော စကားလုံး ၁၆ လုံးပါ Code")
+
 target_email = "ArtContest@minefreemyanmar.info" #
 
-# ---------------- FUNCTIONS ---------------- #
+# ---------------- ၃။ Word ဖိုင် ဖန်တီးသည့် Function ---------------- #
 def create_docx(text, title):
     doc = docx.Document()
     
-    # Page setup (A4 Size)
+    # A4 Size Setup
     section = doc.sections[0]
     section.page_width = Mm(210)
     section.page_height = Mm(297)
     
-    # Margins (25mm ပတ်လည်)
+    # Margins 25mm ပတ်လည်
     section.left_margin = Mm(25)
     section.right_margin = Mm(25)
     section.top_margin = Mm(25)
     section.bottom_margin = Mm(25)
     
-    # Title (Center Alignment)
+    # Title - Center Aligned
     h = doc.add_paragraph()
     h.alignment = WD_ALIGN_PARAGRAPH.CENTER
     run_h = h.add_run(title)
     run_h.font.size = Pt(14)
     run_h.font.bold = True
     
-    # Body Text (Justified & 12pt)
+    doc.add_paragraph("") # Space တစ်ကြောင်းခြား
+
+    # Body Text - Justified (စာကြောင်းအနောက်ညီစေရန်)
     paragraphs = text.split('\n')
     for p_text in paragraphs:
         if p_text.strip():
             p = doc.add_paragraph()
-            # အနောက်က စာကြောင်းညီအောင် ညှိခြင်း
-            p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY 
+            p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY # ဤနေရာတွင် စာကြောင်းညီအောင် ညှိသည်
             run = p.add_run(p_text.strip())
-            run.font.size = Pt(12)
-            # စာပိုဒ်အစကို Space ချန်ခြင်း
-            p.paragraph_format.first_line_indent = Mm(12.7) 
+            run.font.size = Pt(12) #
+            p.paragraph_format.first_line_indent = Mm(12.7) # စာပိုဒ်အစကို Space ချန်သည်
 
     file_stream = io.BytesIO()
     doc.save(file_stream)
     file_stream.seek(0)
     return file_stream
 
-def send_email_with_attach(sender, pwd, receiver, subject, content, file_stream):
-    msg = MIMEMultipart()
-    msg['From'] = sender
-    msg['To'] = receiver
-    msg['Subject'] = subject
-    msg.attach(MIMEText(content, 'plain'))
-    
-    part = MIMEBase('application', 'octet-stream')
-    part.set_payload(file_stream.read())
-    encoders.encode_base64(part)
-    part.add_header('Content-Disposition', 'attachment; filename="Essay_Submission.docx"')
-    msg.attach(part)
-    
-    server = smtplib.SMTP('smtp.gmail.com', 587)
-    server.starttls()
-    server.login(sender, pwd)
-    server.send_message(msg)
-    server.quit()
+# ---------------- ၄။ Email ပို့သည့် Function ---------------- #
+def send_essay_email(sender, pwd, receiver, subject, file_stream):
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = sender
+        msg['To'] = receiver
+        msg['Subject'] = subject
+        msg.attach(MIMEText("စာစီစာကုံးပြိုင်ပွဲအတွက် ပူးတွဲပါ Word ဖိုင်ဖြင့် ပေးပို့အပ်ပါသည်။", 'plain'))
+        
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload(file_stream.read())
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', 'attachment; filename="Essay_Entry.docx"')
+        msg.attach(part)
+        
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender, pwd)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        st.error(f"Email ပို့ရာတွင် အမှားအယွင်းရှိပါသည်: {str(e)}")
+        return False
 
-# ---------------- MAIN PROCESS ---------------- #
+# ---------------- ၅။ စာစီစာကုံး ရေးသားမည့် Process ---------------- #
 if st.button("စာစီစာကုံး စတင်ရေးသားမည်"):
     if not api_key:
-        st.error("API Key ထည့်ပေးပါ")
+        st.warning("ကျေးဇူးပြု၍ API Key အရင်ထည့်ပေးပါ")
     else:
         try:
-            with st.spinner("AI မှ ပညာရှင်တစ်ယောက်ကဲ့သို့ ရေးသားနေပါသည်..."):
+            with st.spinner("Gemini 3 Flash Preview မှ ပညာရှင်တစ်ယောက်ကဲ့သို့ ရေးသားနေပါသည်..."):
                 genai.configure(api_key=api_key)
-                # အရင်က gemini-1.5-pro သို့မဟုတ် gemini-1.5-flash နေရာတွင် 
-# အောက်ပါအတိုင်း gemini-3-flash-preview သို့ ပြောင်းလဲပါ
-           model = genai.GenerativeModel("gemini-3-flash-preview")
-
+                # Gemini 3 Flash Preview အသုံးပြုခြင်း
+                model = genai.GenerativeModel("gemini-3-flash-preview")
                 
-model 
-                
-                # စည်းကမ်းချက်များအတိုင်း Prompt ပေးခြင်း
+                # စည်းကမ်းချက်များနှင့်အညီ Prompt ပေးခြင်း
                 prompt = f"""
+                မင်းက မြန်မာစာပေနဲ့ လူမှုရေးရာ ကျွမ်းကျင်တဲ့ ပညာရှင်တစ်ယောက် ဖြစ်တယ်။
                 ခေါင်းစဉ်- "{selected_topic}"
                 
-                သင်သည် မြန်မာစာပေ ကျွမ်းကျင်သော ပညာရှင်တစ်ဦး ဖြစ်သည်။ အောက်ပါ စည်းကမ်းချက်များအတိုင်း စာစီစာကုံးကို မြန်မာဘာသာဖြင့် ရေးပေးပါ-
-                ၁။ AI ရေးထားမှန်း မသိစေရန် သဘာဝကျကျနှင့် စိတ်လှုပ်ရှားဖွယ် ရေးသားပါ။ (Bullet points များ မသုံးပါနှင့်)
-                ၂။ အောက်ပါအချက် ၃ ချက်ကို စာပိုဒ်များအတွင်း မဖြစ်မနေ ထည့်သွင်းပါ-
-                   - လက်တွေ့ကျကျ အကောင်အထည်ဖော်မည့် အကြံပြုချက်များ။
-                   - အကောင်အထည်ဖော်ရာတွင် ကြုံတွေ့နိုင်သည့် အခက်အခဲများ။
+                အောက်ပါ စည်းကမ်းချက်အတိုင်း စာစီစာကုံး ရေးသားပါ-
+                ၁။ AI ရေးထားမှန်း မသိသာစေရန် သဘာဝကျကျနှင့် ရသပါအောင် ရေးပါ။ Bullet points လုံးဝ မသုံးရ။
+                ၂။ အချက်အလက် (၃) ချက်ကို စာပိုဒ်များအတွင်း ထည့်ရေးပါ-
+                   - လက်တွေ့ကျသော အကြံပြုချက်များ။
+                   - ကြုံတွေ့နိုင်သော အခက်အခဲများ။
                    - ထိုအခက်အခဲများကို ကျော်လွှားမည့် နည်းလမ်းများ။
                 ၃။ စာလုံးရေသည် A4 စာရွက်ဖြင့် ၁.၅ မျက်နှာမှ ၃ မျက်နှာအတွင်း ရှိရမည်။
+                ၄။ မြန်မာဘာသာဖြင့်သာ ရေးသားပါ။
                 """
                 
                 response = model.generate_content(prompt)
-                essay_text = response.text
+                essay_content = response.text
                 
-                # Word ဖိုင် ဖန်တီးခြင်း
-                docx_output = create_docx(essay_text, selected_topic)
+                # Word ဖိုင် ထုတ်ယူခြင်း
+                word_file = create_docx(essay_content, selected_topic)
                 
-                st.success("စာစီစာကုံး ရေးသားပြီးပါပြီ!")
-                st.text_area("အကြမ်းဖျင်းဖတ်ရှုရန်", essay_text, height=300)
+                st.success("စာစီစာကုံး ရေးသားမှု အောင်မြင်ပါသည်!")
+                st.text_area("ရေးသားထားသော စာသားများ (Preview):", essay_content, height=400)
                 
-                # Download Button
+                # Download ခလုတ်
                 st.download_button(
-                    label="📥 Word ဖိုင် ဒေါင်းလုဒ်ဆွဲရန်",
-                    data=docx_output,
+                    label="📥 Word ဖိုင် ဒေါင်းလုဒ်လုပ်ရန်",
+                    data=word_file,
                     file_name="Mine_Free_Myanmar_Essay.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
                 
-                # Auto Email Sending
+                # Email အလိုအလျောက် ပို့ခြင်း
                 if sender_email and app_password:
-                    docx_output.seek(0) # Reset stream
-                    send_email_with_attach(
-                        sender_email, app_password, target_email, 
-                        f"Entry for Essay Contest: {selected_topic[:30]}...", 
-                        "စာစီစာကုံးပြိုင်ပွဲအတွက် ပူးတွဲဖိုင်ဖြင့် ပေးပို့အပ်ပါသည်။", 
-                        docx_output
-                    )
-                    st.success(f"Email ကို {target_email} သို့ အလိုအလျောက် ပေးပို့ပြီးပါပြီ!")
+                    word_file.seek(0)
+                    if send_essay_email(sender_email, app_password, target_email, f"Essay Contest Entry: {selected_topic[:30]}", word_file):
+                        st.success(f"Email ကို {target_email} သို့ ပေးပို့ပြီးပါပြီ!")
 
         except Exception as e:
-            st.error(f"Error: {str(e)}")
+            # Quota Error (429) ကို ကိုင်တွယ်ခြင်း
+            if "429" in str(e):
+                st.error("အသုံးပြုမှု အကြိမ်ရေ ကန့်သတ်ချက် ပြည့်သွားပါပြီ။ ၁ မိနစ်ခန့် စောင့်ပြီးမှ ပြန်လည် ကြိုးစားပါ။")
+            else:
+                st.error(f"Error ဖြစ်ပေါ်နေပါသည်: {str(e)}")
